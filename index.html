@@ -72,38 +72,27 @@
                 <div class="flex flex-col items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="#FF0000" viewBox="0 0 256 256"><path d="M234.33,69.52a24,24,0,0,0-14.49-16.4C193.08,41,128,41,128,41s-65.08,0-91.84,12.12a24,24,0,0,0-14.49,16.4C18.39,84.09,16,128,16,128s2.39,43.91,5.67,58.48a24,24,0,0,0,14.49,16.41C62.92,215,128,215,128,215s65.08,0,91.84-12.12a24,24,0,0,0,14.49-16.41C237.61,171.91,240,128,240,128S237.61,84.09,234.33,69.52ZM160,128,104,160V96Z"></path></svg>
                     <h1 class="text-4xl font-extrabold mt-4 tracking-tight">YouTube Multi-View</h1>
-                    <p class="text-gray-400 mt-2">動画を追加して自分だけの複窓環境を作ろう</p>
+                    <p class="text-gray-400 mt-2 font-medium">URLを貼るか、キーワードで動画を探そう</p>
                 </div>
 
                 <div class="bg-[#1e1e1e] p-8 rounded-3xl shadow-2xl border border-white/10 space-y-6">
-                    <div class="space-y-2">
-                        <label class="block text-left text-sm font-medium text-gray-300 ml-1">直接URLを追加</label>
-                        <div class="flex gap-2">
+                    <div class="space-y-4">
+                        <div class="relative flex items-center">
                             <input 
                                 type="text" 
-                                id="initialUrl" 
-                                placeholder="https://www.youtube.com/watch?v=..." 
-                                class="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
+                                id="combinedInput" 
+                                placeholder="URLを貼り付け、または動画を検索..." 
+                                class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-5 pr-32 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all text-lg"
+                                onkeypress="if(event.key === 'Enter') handleSmartInput('combinedInput')"
                             >
-                            <button onclick="addVideoFromInput('initialUrl')" class="bg-red-600 hover:bg-red-700 px-6 rounded-xl font-bold">追加</button>
+                            <button 
+                                onclick="handleSmartInput('combinedInput')" 
+                                class="absolute right-3 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl font-bold shadow-lg transition-all"
+                            >
+                                追加・検索
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="relative py-4">
-                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
-                        <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#1e1e1e] px-2 text-gray-500 font-bold">OR SEARCH</span></div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="block text-left text-sm font-medium text-gray-300 ml-1">キーワードで検索して追加</label>
-                        <input 
-                            type="text" 
-                            id="initialSearch" 
-                            placeholder="動画を検索..." 
-                            class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-                            onkeypress="if(event.key === 'Enter') startWithSearch()"
-                        >
-                        <p class="text-[10px] text-gray-500 text-left mt-1">※検索には右パネルでAPIキーの設定が必要です</p>
+                        <p class="text-[11px] text-gray-500 text-center">URLなら即座に追加、キーワードなら検索結果を表示します</p>
                     </div>
                 </div>
             </div>
@@ -123,12 +112,11 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></svg>
                     検索・追加
                 </h2>
-                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white lg:hidden">
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
                 </button>
             </div>
 
-            <!-- API Key & Search Inputs in Sidebar -->
             <div class="space-y-3">
                 <div class="flex gap-2">
                     <input 
@@ -142,23 +130,14 @@
                 <div class="relative">
                     <input 
                         type="text" 
-                        id="sidebarSearchQuery" 
-                        placeholder="キーワード..." 
-                        class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-600"
-                        onkeypress="if(event.key === 'Enter') searchVideos('sidebarSearchQuery')"
+                        id="sidebarInput" 
+                        placeholder="URLまたはキーワード..." 
+                        class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-600 text-sm"
+                        onkeypress="if(event.key === 'Enter') handleSmartInput('sidebarInput')"
                     >
-                    <button onclick="searchVideos('sidebarSearchQuery')" class="absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                    <button onclick="handleSmartInput('sidebarInput')" class="absolute right-3 top-2.5 text-gray-400 hover:text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></svg>
                     </button>
-                </div>
-                <div class="flex gap-2">
-                    <input 
-                        type="text" 
-                        id="sidebarUrl" 
-                        placeholder="URLを直接追加..." 
-                        class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-red-500"
-                    >
-                    <button onclick="addVideoFromInput('sidebarUrl')" class="bg-red-600 text-[10px] px-3 rounded font-bold">追加</button>
                 </div>
             </div>
         </div>
@@ -181,7 +160,6 @@
         let youtubeApiKey = localStorage.getItem('youtube_api_key') || '';
         let isSidebarOpen = false;
 
-        // Initialize API Key
         if (youtubeApiKey) document.getElementById('apiKey').value = youtubeApiKey;
 
         function saveApiKey() {
@@ -202,16 +180,42 @@
             }
         }
 
-        function switchToGridView() {
-            welcomeView.classList.add('hidden');
-            videoGrid.classList.remove('hidden');
-            toggleBtn.classList.remove('hidden');
-        }
-
         function extractVideoId(url) {
             const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
             const match = url.match(regExp);
             return (match && match[7].length == 11) ? match[7] : false;
+        }
+
+        // URLか検索キーワードかを判別するメインロジック
+        async function handleSmartInput(inputId) {
+            const input = document.getElementById(inputId);
+            const value = input.value.trim();
+            if (!value) return;
+
+            const videoId = extractVideoId(value);
+
+            if (videoId) {
+                // URLだった場合：即座に追加
+                createVideoElement(videoId);
+                input.value = '';
+                if (isSidebarOpen) toggleSidebar();
+            } else {
+                // キーワードだった場合：検索を実行
+                if (!isSidebarOpen) {
+                    toggleSidebar();
+                    switchToGridView();
+                }
+                // 入力値をサイドバー側にも同期させて検索実行
+                document.getElementById('sidebarInput').value = value;
+                await searchVideos(value);
+                input.value = '';
+            }
+        }
+
+        function switchToGridView() {
+            welcomeView.classList.add('hidden');
+            videoGrid.classList.remove('hidden');
+            toggleBtn.classList.remove('hidden');
         }
 
         function createVideoElement(videoId) {
@@ -242,18 +246,6 @@
             videoGrid.appendChild(videoCard);
         }
 
-        function addVideoFromInput(inputId) {
-            const input = document.getElementById(inputId);
-            const videoId = extractVideoId(input.value.trim());
-            if (videoId) {
-                createVideoElement(videoId);
-                input.value = '';
-                if (isSidebarOpen) toggleSidebar();
-            } else {
-                alert('有効なYouTube URLを入力してください。');
-            }
-        }
-
         function removeVideo(button) {
             button.closest('.group').remove();
             if (videoGrid.querySelectorAll('.group').length === 0) {
@@ -264,21 +256,15 @@
             }
         }
 
-        async function startWithSearch() {
-            const query = document.getElementById('initialSearch').value.trim();
-            if (!query) return;
-            document.getElementById('sidebarSearchQuery').value = query;
-            await searchVideos('sidebarSearchQuery');
-            toggleSidebar();
-            switchToGridView();
-        }
-
-        async function searchVideos(inputId) {
-            const query = document.getElementById(inputId).value.trim();
+        async function searchVideos(query) {
             if (!query) return;
             if (!youtubeApiKey) {
-                alert('APIキーを設定してください。');
-                toggleSidebar();
+                searchResults.innerHTML = `
+                    <div class="text-center text-gray-500 py-10 px-4">
+                        <p class="text-sm">APIキーが設定されていません</p>
+                        <p class="text-[10px] mt-2 italic">右上の「Google API Key」欄にキーを入力して保存してください。</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -304,7 +290,6 @@
                     itemEl.className = 'bg-white/5 rounded-xl overflow-hidden cursor-pointer hover:bg-white/10 transition-all group border border-white/5';
                     itemEl.onclick = () => {
                         createVideoElement(videoId);
-                        // スマホなどの狭い画面では追加後に閉じる
                         if (window.innerWidth < 1024) toggleSidebar();
                     };
                     itemEl.innerHTML = `
