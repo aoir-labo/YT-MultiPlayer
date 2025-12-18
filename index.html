@@ -55,7 +55,7 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 h-screen overflow-y-auto relative">
-        <!-- Floating Toggle Button (Visible when videos exist) -->
+        <!-- Floating Toggle Button -->
         <button 
             id="toggleSidebar"
             onclick="toggleSidebar()" 
@@ -66,7 +66,7 @@
             </svg>
         </button>
 
-        <!-- Initial Welcome / Center Search (Visible when empty) -->
+        <!-- Initial Welcome / Center Search -->
         <div id="welcomeView" class="min-h-full flex flex-col items-center justify-center p-6 text-center">
             <div class="max-w-2xl w-full space-y-8 animate-in fade-in zoom-in duration-500">
                 <div class="flex flex-col items-center">
@@ -89,23 +89,24 @@
                                 onclick="handleSmartInput('combinedInput')" 
                                 class="absolute right-3 bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl font-bold shadow-lg transition-all"
                             >
-                                追加・検索
+                                実行
                             </button>
                         </div>
-                        <p class="text-[11px] text-gray-500 text-center">URLなら即座に追加、キーワードなら検索結果を表示します</p>
+                        <p class="text-[11px] text-gray-500 text-center uppercase tracking-widest">Type keyword to search or Paste URL to add</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Video Grid Area (Hidden initially) -->
+        <!-- Video Grid Area -->
         <main id="videoGrid" class="grid-dynamic max-w-[1800px] mx-auto p-4 md:p-8 pt-20 hidden">
-            <!-- Videos will be injected here -->
+            <!-- Videos injected here -->
         </main>
     </div>
 
-    <!-- Right Sidebar: Search Panel (Overlay style) -->
+    <!-- Right Sidebar -->
     <aside id="sidebar" class="fixed right-0 top-0 bottom-0 w-80 lg:w-96 bg-[#0f0f0f] border-l border-white/10 flex flex-col z-40 translate-x-full shadow-2xl">
+        <!-- Sidebar Header & Search -->
         <div class="p-4 border-b border-white/10 bg-[#121212] flex flex-col gap-4">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-bold flex items-center gap-2">
@@ -117,28 +118,17 @@
                 </button>
             </div>
 
-            <div class="space-y-3">
-                <div class="flex gap-2">
-                    <input 
-                        type="password" 
-                        id="apiKey" 
-                        placeholder="Google API Key" 
-                        class="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-red-500 outline-none"
-                    >
-                    <button onclick="saveApiKey()" class="bg-white/10 hover:bg-white/20 text-xs px-3 rounded">保存</button>
-                </div>
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        id="sidebarInput" 
-                        placeholder="URLまたはキーワード..." 
-                        class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-600 text-sm"
-                        onkeypress="if(event.key === 'Enter') handleSmartInput('sidebarInput')"
-                    >
-                    <button onclick="handleSmartInput('sidebarInput')" class="absolute right-3 top-2.5 text-gray-400 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></svg>
-                    </button>
-                </div>
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="sidebarInput" 
+                    placeholder="キーワードまたはURL..." 
+                    class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-red-600 text-sm shadow-inner"
+                    onkeypress="if(event.key === 'Enter') handleSmartInput('sidebarInput')"
+                >
+                <button onclick="handleSmartInput('sidebarInput')" class="absolute right-3 top-3 text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></svg>
+                </button>
             </div>
         </div>
 
@@ -146,6 +136,32 @@
         <div id="searchResults" class="flex-1 overflow-y-auto p-4 space-y-4 bg-black/20">
             <div class="text-center text-gray-500 py-10 text-xs italic">
                 検索結果がここに表示されます
+            </div>
+        </div>
+
+        <!-- API Settings Section (Moved to Bottom) -->
+        <div class="border-t border-white/10 bg-[#121212]">
+            <button 
+                onclick="toggleApiSettings()" 
+                class="w-full p-4 flex items-center justify-between text-xs text-gray-400 hover:text-white transition-colors"
+            >
+                <span class="flex items-center gap-2 uppercase tracking-widest font-bold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm112.33-40.7-22.31-7.44a80,80,0,0,0-7.32-17.68l11-20.52a8,8,0,0,0-1.1-9.2L201.55,45.41a8,8,0,0,0-9.2-1.1l-20.52,11a80,80,0,0,0-17.68-7.32L146.7,25.67a8,8,0,0,0-7.66-5.67h-22.08a8,8,0,0,0-7.66,5.67l-7.44,22.31a80,80,0,0,0-17.68,7.32l-20.52-11a8,8,0,0,0-9.2,1.1L35.4,63.45a8,8,0,0,0-1.1,9.2l11,20.52a80,80,0,0,0-7.32,17.68l-22.31,7.44A8,8,0,0,0,10,126.04v22.08a8,8,0,0,0,5.67,7.66l22.31,7.44a80,80,0,0,0,7.32,17.68l-11,20.52a8,8,0,0,0,1.1,9.2L54.45,210.59a8,8,0,0,0,9.2,1.1l20.52-11a80,80,0,0,0,17.68,7.32l7.44,22.31a8,8,0,0,0,7.66,5.67h22.08a8,8,0,0,0,7.66-5.67l7.44-22.31a80,80,0,0,0,17.68-7.32l20.52,11a8,8,0,0,0,9.2-1.1l19.05-19.05a8,8,0,0,0,1.1-9.2l-11-20.52a80,80,0,0,0,7.32-17.68l22.31-7.44a8,8,0,0,0,5.67-7.66v-22.08A8,8,0,0,0,240.33,119.3ZM224.33,144l-21.36,7.12a8,8,0,0,0-5.32,6.1,64.32,64.32,0,0,1-10.37,25.06,8,8,0,0,0,0,8.14l10.54,19.68-12.33,12.33-19.68-10.54a8,8,0,0,0-8.14,0,64.32,64.32,0,0,1-25.06,10.37,8,8,0,0,0-6.1,5.32L128,223.33,120.88,202a8,8,0,0,0-6.1-5.32,64.32,64.32,0,0,1-25.06-10.37,8,8,0,0,0-8.14,0L61.9,196.85,49.57,184.52l10.54-19.68a8,8,0,0,0,0-8.14,64.32,64.32,0,0,1-10.37-25.06,8,8,0,0,0-5.32-6.1L23,138.33V126l21.36-7.12a8,8,0,0,0,5.32-6.1,64.32,64.32,0,0,1,10.37-25.06,8,8,0,0,0,0-8.14L49.51,59.9,61.84,47.57l19.68,10.54a8,8,0,0,0,8.14,0A64.32,64.32,0,0,1,114.72,47.74a8,8,0,0,0,6.1-5.32L128,21l7.12,21.36a8,8,0,0,0,6.1,5.32,64.32,64.32,0,0,1,25.06,10.37,8,8,0,0,0,8.14,0L194.1,47.48l12.33,12.33-10.54,19.68a8,8,0,0,0,0,8.14,64.32,64.32,0,0,1,10.37,25.06,8,8,0,0,0,5.32,6.1l21.36,7.12V144Z"></path></svg>
+                    API 設定を表示
+                </span>
+                <svg id="apiSettingsChevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" class="transition-transform"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path></svg>
+            </button>
+            <div id="apiSettingsPanel" class="hidden p-4 pt-0 space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                <p class="text-[10px] text-gray-500 italic">検索機能を使用するには API キーが必要です。</p>
+                <div class="flex gap-2">
+                    <input 
+                        type="password" 
+                        id="apiKey" 
+                        placeholder="Google API Key" 
+                        class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-red-500 outline-none"
+                    >
+                    <button onclick="saveApiKey()" class="bg-red-600 hover:bg-red-700 text-white text-[10px] px-4 rounded-lg font-bold transition-colors">保存</button>
+                </div>
             </div>
         </div>
     </aside>
@@ -156,6 +172,8 @@
         const sidebar = document.getElementById('sidebar');
         const toggleBtn = document.getElementById('toggleSidebar');
         const searchResults = document.getElementById('searchResults');
+        const apiSettingsPanel = document.getElementById('apiSettingsPanel');
+        const apiSettingsChevron = document.getElementById('apiSettingsChevron');
         
         let youtubeApiKey = localStorage.getItem('youtube_api_key') || '';
         let isSidebarOpen = false;
@@ -168,7 +186,13 @@
                 youtubeApiKey = key;
                 localStorage.setItem('youtube_api_key', key);
                 alert('APIキーを保存しました。');
+                toggleApiSettings();
             }
+        }
+
+        function toggleApiSettings() {
+            const isHidden = apiSettingsPanel.classList.toggle('hidden');
+            apiSettingsChevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
         function toggleSidebar() {
@@ -186,7 +210,6 @@
             return (match && match[7].length == 11) ? match[7] : false;
         }
 
-        // URLか検索キーワードかを判別するメインロジック
         async function handleSmartInput(inputId) {
             const input = document.getElementById(inputId);
             const value = input.value.trim();
@@ -195,20 +218,19 @@
             const videoId = extractVideoId(value);
 
             if (videoId) {
-                // URLだった場合：即座に追加
                 createVideoElement(videoId);
                 input.value = '';
                 if (isSidebarOpen) toggleSidebar();
             } else {
-                // キーワードだった場合：検索を実行
                 if (!isSidebarOpen) {
                     toggleSidebar();
                     switchToGridView();
                 }
-                // 入力値をサイドバー側にも同期させて検索実行
                 document.getElementById('sidebarInput').value = value;
                 await searchVideos(value);
                 input.value = '';
+                // 検索時はフォーカスを外す（モバイルでキーボードを隠すため）
+                input.blur();
             }
         }
 
@@ -260,9 +282,11 @@
             if (!query) return;
             if (!youtubeApiKey) {
                 searchResults.innerHTML = `
-                    <div class="text-center text-gray-500 py-10 px-4">
+                    <div class="text-center text-gray-500 py-10 px-4 space-y-4">
                         <p class="text-sm">APIキーが設定されていません</p>
-                        <p class="text-[10px] mt-2 italic">右上の「Google API Key」欄にキーを入力して保存してください。</p>
+                        <button onclick="toggleApiSettings()" class="text-blue-400 hover:underline text-xs">
+                            設定パネルを開いてキーを入力してください
+                        </button>
                     </div>
                 `;
                 return;
@@ -308,7 +332,7 @@
                 });
 
             } catch (error) {
-                searchResults.innerHTML = `<div class="text-center text-red-400 py-10 text-[10px] px-2">エラー: ${error.message}</div>`;
+                searchResults.innerHTML = `<div class="text-center text-red-400 py-10 text-[10px] px-2 leading-relaxed">エラー: ${error.message}</div>`;
             }
         }
     </script>
