@@ -26,10 +26,12 @@
             width: 100%;
             height: 100%;
         }
+        /* Dynamic Grid: Auto-fill based on available width */
         .grid-dynamic {
             display: grid;
-            gap: 1.5rem;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1rem;
+            /* Adjust 320px to change the minimum width of each video card */
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         }
         /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
@@ -99,7 +101,8 @@
             </div>
         </div>
 
-        <main id="videoGrid" class="grid-dynamic max-w-[1800px] mx-auto p-4 md:p-8 pt-20 hidden">
+        <!-- The main area that expands based on screen width -->
+        <main id="videoGrid" class="grid-dynamic w-full p-4 md:p-6 pt-20 hidden">
             <!-- Videos injected here -->
         </main>
     </div>
@@ -255,13 +258,13 @@
                 <div class="video-container">
                     <iframe src="${stream.embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
                 </div>
-                <div class="p-3 flex justify-between items-center bg-[#1a1a1a]">
+                <div class="p-2 flex justify-between items-center bg-[#1a1a1a]">
                     <div class="flex items-center gap-2">
                         <span class="${badgeColors[stream.type] || 'bg-gray-600'} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter">${stream.type}</span>
-                        <span class="text-[10px] text-gray-500 font-mono truncate max-w-[150px]">${stream.id}</span>
+                        <span class="text-[10px] text-gray-500 font-mono truncate max-w-[120px]">${stream.id}</span>
                     </div>
                     <button onclick="this.closest('.group').remove(); checkEmpty();" class="text-gray-400 hover:text-red-500 transition-colors p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm112,168a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V64H208Z"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm112,168a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V64H208Z"></path></svg>
                     </button>
                 </div>
             `;
