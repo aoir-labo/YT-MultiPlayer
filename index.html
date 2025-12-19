@@ -5,59 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YT-MultiPlayer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body {
             background-color: #0f0f0f;
             color: #ffffff;
             font-family: 'Helvetica Neue', Arial, sans-serif;
         }
-        .video-container {
+        .video-wrapper {
             position: relative;
-            padding-bottom: 56.25%;
+            width: 100%;
             height: 0;
             overflow: hidden;
             border-radius: 12px;
             background: #272727;
+            transition: padding-bottom 0.3s ease;
         }
-        .video-container iframe {
+        .aspect-16-9 { padding-bottom: 56.25%; }
+        .aspect-4-3 { padding-bottom: 75%; }
+
+        .video-wrapper iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
         }
-        /* Dynamic Grid: Auto-fill based on available width */
+        
         .grid-dynamic {
             display: grid;
             gap: 1rem;
-            /* Adjust 320px to change the minimum width of each video card */
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(var(--min-width, 320px), 1fr));
         }
-        /* Scrollbar */
+
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f0f0f; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
         
         #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        @keyframes flash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .flash-effect {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+        }
     </style>
 </head>
 <body class="min-h-screen flex overflow-hidden">
+    <div id="flash" class="flash-effect"></div>
 
-    <div class="flex-1 h-screen overflow-y-auto relative">
-        <!-- Floating Toggle Button -->
-        <button 
-            id="toggleSidebar"
-            onclick="toggleSidebar()" 
-            class="fixed top-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-2xl transition-transform hidden hover:scale-110 active:scale-95"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
-                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-            </svg>
-        </button>
+    <div class="flex-1 h-screen overflow-y-auto relative flex flex-col">
+        <!-- Header Controls -->
+        <header id="topControls" class="fixed top-0 left-0 right-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10 p-3 hidden items-center justify-between">
+            <div class="flex items-center gap-3">
+                <h2 class="text-sm font-black tracking-tighter hidden lg:block">YT-MultiPlayer</h2>
+                
+                <!-- Grid Size -->
+                <div class="flex items-center gap-2 bg-white/5 px-2 py-1.5 rounded-lg border border-white/10">
+                    <span class="text-[9px] text-gray-400 font-bold uppercase">Size</span>
+                    <input type="range" id="sizeSlider" min="200" max="800" value="320" class="w-20 sm:w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                </div>
 
-        <!-- Initial Welcome View -->
-        <div id="welcomeView" class="min-h-full flex flex-col items-center justify-center p-6 text-center">
+                <!-- Aspect -->
+                <div class="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/10">
+                    <button onclick="setAspect('16-9')" id="btn-16-9" class="px-2 py-0.5 text-[9px] font-bold rounded bg-indigo-600 text-white transition-colors">16:9</button>
+                    <button onclick="setAspect('4-3')" id="btn-4-3" class="px-2 py-0.5 text-[9px] font-bold rounded hover:bg-white/10 text-gray-400 transition-colors">4:3</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Sync LIVE Button -->
+                <button onclick="syncLiveAll()" title="LIVE最新地点に同期" class="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-white text-[10px] font-bold transition-all active:scale-95 shadow-lg">
+                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                    SYNC LIVE
+                </button>
+
+                <button onclick="toggleMuteAll()" id="muteAllBtn" title="一括ミュート/解除" class="p-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-gray-300">
+                    <svg id="muteIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M160,32V224a8,8,0,0,1-12.91,6.31L77.25,176H40a16,16,0,0,1-16-16V96A16,16,0,0,1,40,80H77.25l69.84-54.31A8,8,0,0,1,160,32Zm-16,16.31L81.25,96a8,8,0,0,1-4.94,1.71H40v64H76.31a8,8,0,0,1,4.94,1.71L144,207.69Z"></path></svg>
+                </button>
+                
+                <button onclick="captureScreenshot()" title="スクショ保存" class="p-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M208,56H181.33L164,32.86A15.86,15.86,0,0,0,150.93,24H105.07A15.86,15.86,0,0,0,92,32.86L74.67,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.57L104,40h48l17.34,28.43A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"></path></svg>
+                </button>
+
+                <button onclick="toggleSidebar()" class="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Initial Welcome -->
+        <div id="welcomeView" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
             <div class="max-w-2xl w-full space-y-8 animate-in fade-in zoom-in duration-500">
                 <div class="flex flex-col items-center">
                     <div class="flex gap-2">
@@ -67,43 +115,31 @@
                         <span class="px-2 py-1 bg-blue-400 rounded text-[10px] font-bold">ツイキャス</span>
                     </div>
                     <h1 class="text-5xl font-black mt-6 tracking-tighter text-white">YT-MultiPlayer</h1>
-                    <p class="text-gray-400 mt-2 font-medium">URLを貼り付けて動画を追加、またはキーワードで検索</p>
+                    <p class="text-gray-400 mt-2 font-medium italic">ライブ配信をリアルタイムで同期・マルチ同時視聴</p>
                 </div>
 
                 <div class="bg-[#1e1e1e] p-8 rounded-3xl shadow-2xl border border-white/10 space-y-6">
-                    <div class="space-y-4">
-                        <div class="relative flex items-center">
-                            <input 
-                                type="text" 
-                                id="combinedInput" 
-                                placeholder="配信URLを貼り付け、または検索..." 
-                                class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-5 pr-32 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-lg"
-                                onkeypress="if(event.key === 'Enter') handleSmartInput('combinedInput')"
-                            >
-                            <button 
-                                onclick="handleSmartInput('combinedInput')" 
-                                class="absolute right-3 bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-xl font-bold shadow-lg transition-all"
-                            >
-                                追加
-                            </button>
-                        </div>
-                        <div class="flex justify-center gap-4 text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                            <span>YouTube</span>
-                            <span class="text-gray-700">•</span>
-                            <span>Twitch</span>
-                            <span class="text-gray-700">•</span>
-                            <span>NicoNico</span>
-                            <span class="text-gray-700">•</span>
-                            <span>TwitCasting</span>
-                        </div>
+                    <div class="relative flex items-center">
+                        <input 
+                            type="text" 
+                            id="combinedInput" 
+                            placeholder="URLを貼り付け、または検索..." 
+                            class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-5 pr-32 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-lg outline-none"
+                            onkeypress="if(event.key === 'Enter') handleSmartInput('combinedInput')"
+                        >
+                        <button 
+                            onclick="handleSmartInput('combinedInput')" 
+                            class="absolute right-3 bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-xl font-bold transition-all"
+                        >
+                            追加
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- The main area that expands based on screen width -->
+        <!-- Video Grid -->
         <main id="videoGrid" class="grid-dynamic w-full p-4 md:p-6 pt-20 hidden">
-            <!-- Videos injected here -->
         </main>
     </div>
 
@@ -121,22 +157,20 @@
                     type="text" 
                     id="sidebarInput" 
                     placeholder="URLまたはキーワード..." 
-                    class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm"
+                    class="w-full bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm outline-none"
                     onkeypress="if(event.key === 'Enter') handleSmartInput('sidebarInput')"
                 >
             </div>
         </div>
 
         <div id="searchResults" class="flex-1 overflow-y-auto p-4 space-y-4 bg-black/20">
-            <div class="text-center text-gray-500 py-10 text-xs">
-                YouTubeの検索結果がここに表示されます
-            </div>
+            <div class="text-center text-gray-500 py-10 text-xs italic">キーワードで検索</div>
         </div>
 
-        <!-- API Settings -->
+        <!-- Settings -->
         <div class="border-t border-white/10 bg-[#121212]">
             <button onclick="toggleApiSettings()" class="w-full p-4 flex items-center justify-between text-xs text-gray-400 hover:text-white transition-colors">
-                <span class="flex items-center gap-2 uppercase tracking-widest font-bold">YouTube API設定</span>
+                <span class="flex items-center gap-2 uppercase tracking-widest font-bold">YouTube API Settings</span>
                 <svg id="apiSettingsChevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" class="transition-transform"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80a8,8,0,0,1,11.32-11.32L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path></svg>
             </button>
             <div id="apiSettingsPanel" class="hidden p-4 pt-0 space-y-3">
@@ -152,15 +186,25 @@
         const videoGrid = document.getElementById('videoGrid');
         const welcomeView = document.getElementById('welcomeView');
         const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('toggleSidebar');
+        const topControls = document.getElementById('topControls');
         const searchResults = document.getElementById('searchResults');
         const apiSettingsPanel = document.getElementById('apiSettingsPanel');
         const apiSettingsChevron = document.getElementById('apiSettingsChevron');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const flash = document.getElementById('flash');
         
         let youtubeApiKey = localStorage.getItem('youtube_api_key') || '';
         let isSidebarOpen = false;
+        let currentAspect = '16-9';
+        let ytPlayers = {}; // API制御用のプレイヤーインスタンス
+        let isAllMuted = true;
 
         if (youtubeApiKey) document.getElementById('apiKey').value = youtubeApiKey;
+
+        // Grid Size adjustment
+        sizeSlider.addEventListener('input', (e) => {
+            videoGrid.style.setProperty('--min-width', `${e.target.value}px`);
+        });
 
         function saveApiKey() {
             const key = document.getElementById('apiKey').value.trim();
@@ -181,34 +225,91 @@
             sidebar.classList.toggle('translate-x-full', !isSidebarOpen);
         }
 
+        function setAspect(ratio) {
+            currentAspect = ratio;
+            document.querySelectorAll('.video-wrapper').forEach(el => {
+                el.classList.remove('aspect-16-9', 'aspect-4-3');
+                el.classList.add(`aspect-${ratio}`);
+            });
+            document.getElementById('btn-16-9').classList.toggle('bg-indigo-600', ratio === '16-9');
+            document.getElementById('btn-16-9').classList.toggle('text-white', ratio === '16-9');
+            document.getElementById('btn-4-3').classList.toggle('bg-indigo-600', ratio === '4-3');
+            document.getElementById('btn-4-3').classList.toggle('text-white', ratio === '4-3');
+        }
+
+        // Live Sync: Jump to the end (LIVE latest) for all YT players
+        function syncLiveAll() {
+            Object.values(ytPlayers).forEach(player => {
+                if (player && typeof player.seekTo === 'function') {
+                    // Jump to a far future time to catch up to live
+                    player.seekTo(9999999, true);
+                    player.playVideo();
+                }
+            });
+            
+            // For other platforms, refresh them as a fallback
+            document.querySelectorAll('iframe:not([id^="yt-player-"])').forEach(iframe => {
+                const src = iframe.src;
+                iframe.src = '';
+                setTimeout(() => { iframe.src = src; }, 10);
+            });
+        }
+
+        function toggleMuteAll() {
+            isAllMuted = !isAllMuted;
+            Object.values(ytPlayers).forEach(player => {
+                if (player && typeof player.mute === 'function') {
+                    isAllMuted ? player.mute() : player.unMute();
+                }
+            });
+            const muteIcon = document.getElementById('muteIcon');
+            muteIcon.innerHTML = isAllMuted 
+                ? '<path d="M160,32V224a8,8,0,0,1-12.91,6.31L77.25,176H40a16,16,0,0,1-16-16V96A16,16,0,0,1,40,80H77.25l69.84-54.31A8,8,0,0,1,160,32Zm-16,16.31L81.25,96a8,8,0,0,1-4.94,1.71H40v64H76.31a8,8,0,0,1,4.94,1.71L144,207.69Z"></path>'
+                : '<path d="M160,32V224a8,8,0,0,1-12.91,6.31L77.25,176H40a16,16,0,0,1-16-16V96A16,16,0,0,1,40,80H77.25l69.84-54.31A8,8,0,0,1,160,32Zm-16,16.31L81.25,96a8,8,0,0,1-4.94,1.71H40v64H76.31a8,8,0,0,1,4.94,1.71L144,207.69Zm69.66,42.34a8,8,0,0,0-11.32,11.32,48,48,0,0,1,0,67.88,8,8,0,0,0,11.32,11.32,64,64,0,0,0,0-90.52Z"></path>';
+        }
+
+        async function captureScreenshot() {
+            if (videoGrid.querySelectorAll('.group').length === 0) return;
+            topControls.classList.add('opacity-0');
+            flash.style.animation = 'none';
+            flash.offsetHeight;
+            flash.style.animation = 'flash 0.5s ease-out';
+
+            try {
+                const canvas = await html2canvas(videoGrid, {
+                    backgroundColor: '#0f0f0f',
+                    scale: 1.5,
+                    useCORS: true,
+                    logging: false
+                });
+                const link = document.createElement('a');
+                link.download = `YTMP-Capture-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (e) { console.error(e); } finally {
+                topControls.classList.remove('opacity-0');
+            }
+        }
+
         function getStreamData(url) {
-            // YouTube
             const ytRegExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
             const ytMatch = url.match(ytRegExp);
             if (ytMatch && ytMatch[7].length == 11) {
-                return { type: 'YouTube', embedUrl: `https://www.youtube.com/embed/${ytMatch[7]}?autoplay=1&mute=1`, id: ytMatch[7] };
+                return { type: 'YouTube', id: ytMatch[7] };
             }
-
-            // Twitch
             if (url.includes('twitch.tv/')) {
-                const parts = url.split('twitch.tv/')[1].split(/[/?#]/);
-                const channel = parts[0];
+                const channel = url.split('twitch.tv/')[1].split(/[/?#]/)[0];
                 const parent = window.location.hostname || 'localhost';
                 return { type: 'Twitch', embedUrl: `https://player.twitch.tv/?channel=${channel}&parent=${parent}&autoplay=true&muted=true`, id: channel };
             }
-
-            // ニコニコ生放送
             if (url.includes('live.nicovideo.jp/watch/')) {
                 const liveId = url.split('watch/')[1].split(/[/?#]/)[0];
                 return { type: 'ニコ生', embedUrl: `https://live.nicovideo.jp/embed/${liveId}`, id: liveId };
             }
-
-            // ツイキャス
             if (url.includes('twitcasting.tv/')) {
                 const user = url.split('twitcasting.tv/')[1].split(/[/?#]/)[0];
                 return { type: 'ツイキャス', embedUrl: `https://twitcasting.tv/${user}/embeddedplayer/show?auto_play=true&default_mute=true`, id: user };
             }
-
             return null;
         }
 
@@ -218,74 +319,112 @@
             if (!value) return;
 
             const stream = getStreamData(value);
-
             if (stream) {
                 addStreamToGrid(stream);
                 input.value = '';
                 if (isSidebarOpen) toggleSidebar();
             } else {
-                if (!isSidebarOpen) {
-                    toggleSidebar();
-                    switchToGridView();
-                }
+                if (!isSidebarOpen) { toggleSidebar(); switchToGridView(); }
                 document.getElementById('sidebarInput').value = value;
                 await searchYouTube(value);
                 input.value = '';
-                input.blur();
             }
         }
 
         function switchToGridView() {
             welcomeView.classList.add('hidden');
             videoGrid.classList.remove('hidden');
-            toggleBtn.classList.remove('hidden');
+            topControls.classList.remove('hidden');
+            topControls.classList.add('flex');
         }
 
         function addStreamToGrid(stream) {
             switchToGridView();
-            
+            const uniqueId = `v-${Date.now()}`;
             const card = document.createElement('div');
-            card.className = 'group relative bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all shadow-lg animate-in slide-in-from-bottom-4 duration-500';
+            card.className = 'group relative bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all shadow-xl animate-in fade-in slide-in-from-bottom-2';
             
-            const badgeColors = {
-                'YouTube': 'bg-red-600',
-                'Twitch': 'bg-purple-600',
-                'ニコ生': 'bg-blue-600',
-                'ツイキャス': 'bg-blue-400'
-            };
+            const badgeColors = { 'YouTube': 'bg-red-600', 'Twitch': 'bg-purple-600', 'ニコ生': 'bg-blue-600', 'ツイキャス': 'bg-blue-400' };
 
-            card.innerHTML = `
-                <div class="video-container">
-                    <iframe src="${stream.embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-                </div>
-                <div class="p-2 flex justify-between items-center bg-[#1a1a1a]">
-                    <div class="flex items-center gap-2">
-                        <span class="${badgeColors[stream.type] || 'bg-gray-600'} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter">${stream.type}</span>
-                        <span class="text-[10px] text-gray-500 font-mono truncate max-w-[120px]">${stream.id}</span>
+            let embedHTML = '';
+            if (stream.type === 'YouTube') {
+                const playerId = `yt-player-${uniqueId}`;
+                embedHTML = `<div id="${playerId}"></div>`;
+                card.innerHTML = `
+                    <div class="video-wrapper aspect-${currentAspect}">${embedHTML}</div>
+                    <div class="p-2 flex justify-between items-center bg-[#1a1a1a]">
+                        <div class="flex items-center gap-2">
+                            <span class="${badgeColors[stream.type]} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${stream.type}</span>
+                            <span class="text-[10px] text-gray-500 font-mono truncate max-w-[100px]">${stream.id}</span>
+                        </div>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="reloadSingle('${uniqueId}')" class="text-gray-400 hover:text-white p-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a96,96,0,0,1-157.6,74.12l-23.74,23.74a8,8,0,0,1-13.66-5.66V160a8,8,0,0,1,8-8h60.24a8,8,0,0,1,5.66,13.66l-23.07,23.07A80,80,0,1,0,48,128a8,8,0,0,1-16,0,96,96,0,1,1,192,0Z"></path></svg></button>
+                            <button onclick="removeStream('${uniqueId}')" class="text-gray-400 hover:text-red-500 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm112,168a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V64H208Z"></path></svg></button>
+                        </div>
                     </div>
-                    <button onclick="this.closest('.group').remove(); checkEmpty();" class="text-gray-400 hover:text-red-500 transition-colors p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm112,168a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V64H208Z"></path></svg>
-                    </button>
-                </div>
-            `;
-            videoGrid.appendChild(card);
+                `;
+                videoGrid.appendChild(card);
+                
+                // Init YT Player via API
+                new YT.Player(playerId, {
+                    videoId: stream.id,
+                    playerVars: { autoplay: 1, mute: 1, enablejsapi: 1, origin: location.origin, rel: 0 },
+                    events: {
+                        onReady: (event) => {
+                            ytPlayers[uniqueId] = event.target;
+                            if (!isAllMuted) event.target.unMute();
+                        }
+                    }
+                });
+            } else {
+                embedHTML = `<iframe src="${stream.embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+                card.innerHTML = `
+                    <div class="video-wrapper aspect-${currentAspect}">${embedHTML}</div>
+                    <div class="p-2 flex justify-between items-center bg-[#1a1a1a]">
+                        <div class="flex items-center gap-2">
+                            <span class="${badgeColors[stream.type]} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${stream.type}</span>
+                            <span class="text-[10px] text-gray-500 font-mono truncate max-w-[100px]">${stream.id}</span>
+                        </div>
+                        <button onclick="removeStream('${uniqueId}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm112,168a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V64H208Z"></path></svg>
+                        </button>
+                    </div>
+                `;
+                card.id = `card-${uniqueId}`;
+                videoGrid.appendChild(card);
+            }
+        }
+
+        function removeStream(uid) {
+            const card = document.getElementById(`card-${uid}`) || Object.values(ytPlayers).find(p => p.getIframe().id === `yt-player-${uid}`)?.getIframe().closest('.group');
+            if (card) card.remove();
+            if (ytPlayers[uid]) delete ytPlayers[uid];
+            checkEmpty();
+        }
+
+        function reloadSingle(uid) {
+            const player = ytPlayers[uid];
+            if (player && typeof player.loadVideoById === 'function') {
+                const vid = player.getVideoData().video_id;
+                player.loadVideoById(vid);
+            }
         }
 
         function checkEmpty() {
             if (videoGrid.querySelectorAll('.group').length === 0) {
                 welcomeView.classList.remove('hidden');
                 videoGrid.classList.add('hidden');
-                toggleBtn.classList.add('hidden');
+                topControls.classList.add('hidden');
                 if (isSidebarOpen) toggleSidebar();
             }
         }
 
         async function searchYouTube(query) {
             if (!youtubeApiKey) {
-                searchResults.innerHTML = `<div class="text-center p-6 text-xs text-gray-500 italic">APIキーを設定するとYouTube内を検索できます</div>`;
+                searchResults.innerHTML = `<div class="text-center p-6 text-[10px] text-gray-500 uppercase font-bold tracking-widest">Setup API Key in settings</div>`;
                 return;
             }
-            searchResults.innerHTML = '<div class="text-center p-6 text-xs animate-pulse">Searching...</div>';
+            searchResults.innerHTML = '<div class="text-center p-10 animate-pulse text-indigo-500 text-[10px] font-black italic">SEARCHING...</div>';
 
             try {
                 const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(query)}&type=video&key=${youtubeApiKey}`);
@@ -297,19 +436,21 @@
                     const videoId = item.id.videoId;
                     const { title, thumbnails } = item.snippet;
                     const itemEl = document.createElement('div');
-                    itemEl.className = 'bg-white/5 rounded-xl overflow-hidden cursor-pointer hover:bg-white/10 transition-all border border-white/5 group';
-                    itemEl.onclick = () => addStreamToGrid({ type: 'YouTube', embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`, id: videoId });
+                    itemEl.className = 'bg-white/5 rounded-xl overflow-hidden cursor-pointer hover:bg-white/10 transition-all border border-white/5 group relative';
+                    itemEl.onclick = () => addStreamToGrid({ type: 'YouTube', id: videoId });
                     itemEl.innerHTML = `
                         <div class="relative">
                             <img src="${thumbnails.medium.url}" class="w-full aspect-video object-cover">
-                            <div class="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div class="absolute inset-0 bg-indigo-600/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm40,112H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32a8,8,0,0,1,0,16Z"></path></svg>
+                            </div>
                         </div>
-                        <div class="p-2 text-xs font-medium line-clamp-2 leading-tight">${title}</div>
+                        <div class="p-2 text-[10px] font-bold line-clamp-2 leading-tight text-gray-300 uppercase">${title}</div>
                     `;
                     searchResults.appendChild(itemEl);
                 });
             } catch (e) {
-                searchResults.innerHTML = `<div class="text-red-400 p-6 text-xs text-center">Error: ${e.message}</div>`;
+                searchResults.innerHTML = `<div class="text-red-500 p-6 text-[10px] text-center font-black">ERROR: ${e.message}</div>`;
             }
         }
     </script>
